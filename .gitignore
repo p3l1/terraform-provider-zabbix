@@ -1,0 +1,48 @@
+# ABOUTME: Git ignore patterns for Go and Terraform provider development.
+# ABOUTME: Excludes build artifacts, IDE files, and test outputs.
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# Build output
+bin/
+dist/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test output
+coverage.out
+coverage.html
+
+# Local environment
+.env
+.envrc
