@@ -1,0 +1,27 @@
+# ABOUTME: Configuration for golangci-lint static analysis.
+# ABOUTME: Defines enabled linters and their settings for code quality checks.
+
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gofmt
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+linters-settings:
+  gofmt:
+    simplify: true
+
+issues:
+  exclude-dirs:
+    - vendor
+
+output:
+  formats:
+    - format: colored-line-number

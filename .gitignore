@@ -46,3 +46,6 @@ coverage.html
 # Local environment
 .env
 .envrc
+
+# Claude Code
+.claude/
