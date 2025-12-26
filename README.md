@@ -12,9 +12,15 @@ A Terraform/OpenTofu provider for managing [Zabbix](https://www.zabbix.com/) mon
 
 ## Supported Resources
 
-This provider will enable Terraform management of Zabbix resources including:
+### Implemented
 
-- Hosts, host groups, and interfaces
+| Resource            | Data Source         | Description        |
+| ------------------- | ------------------- | ------------------ |
+| `zabbix_host_group` | `zabbix_host_group` | Manage host groups |
+
+### Planned
+
+- Hosts and interfaces
 - Templates and template groups
 - Items, triggers, and graphs
 - Discovery rules
