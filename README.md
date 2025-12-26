@@ -1,0 +1,32 @@
+# Terraform Provider for Zabbix
+
+> **Status:** Early development - not yet ready for production use
+
+A Terraform/OpenTofu provider for managing [Zabbix](https://www.zabbix.com/) monitoring infrastructure as code. Define hosts, templates, triggers, and other Zabbix resources declaratively and version-control your monitoring configuration.
+
+## Requirements
+
+- [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.10.7
+- [Go](https://golang.org/doc/install) >= 1.23 (for building)
+- [Zabbix](https://www.zabbix.com/) Server >= 7.0
+
+## Supported Resources
+
+This provider will enable Terraform management of Zabbix resources including:
+
+- Hosts, host groups, and interfaces
+- Templates and template groups
+- Items, triggers, and graphs
+- Discovery rules
+- Actions and media types
+- Users, user groups, and roles
+- Proxies and macros
+- Services and SLAs
+
+## Documentation
+
+This provider maps Terraform resources to Zabbix API objects. For details on the underlying API, see the [Zabbix API Reference](https://www.zabbix.com/documentation/7.0/en/manual/api/reference).
+
+## License
+
+MIT License
