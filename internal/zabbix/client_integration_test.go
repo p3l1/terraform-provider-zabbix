@@ -9,22 +9,33 @@ import (
 	"testing"
 )
 
-func TestIntegration_APIVersion(t *testing.T) {
+const (
+	defaultTestURL   = "http://127.0.0.1:8080/api_jsonrpc.php"
+	defaultTestToken = "071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a"
+)
+
+func newTestClient(t *testing.T) *Client {
+	t.Helper()
+
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Set TF_ACC=1 to run integration tests")
 	}
 
 	url := os.Getenv("ZABBIX_URL")
 	if url == "" {
-		url = "http://127.0.0.1:8080/api_jsonrpc.php"
+		url = defaultTestURL
 	}
 
 	token := os.Getenv("ZABBIX_API_TOKEN")
 	if token == "" {
-		token = "071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a"
+		token = defaultTestToken
 	}
 
-	client := NewClient(url, token)
+	return NewClient(url, token)
+}
+
+func TestIntegration_APIVersion(t *testing.T) {
+	client := newTestClient(t)
 	result, err := client.Request("apiinfo.version", nil)
 
 	if err != nil {
@@ -44,21 +55,7 @@ func TestIntegration_APIVersion(t *testing.T) {
 }
 
 func TestIntegration_HostGet(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
-		t.Skip("Set TF_ACC=1 to run integration tests")
-	}
-
-	url := os.Getenv("ZABBIX_URL")
-	if url == "" {
-		url = "http://127.0.0.1:8080/api_jsonrpc.php"
-	}
-
-	token := os.Getenv("ZABBIX_API_TOKEN")
-	if token == "" {
-		token = "071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a"
-	}
-
-	client := NewClient(url, token)
+	client := newTestClient(t)
 	result, err := client.Request("host.get", map[string]interface{}{
 		"output": []string{"hostid", "host"},
 	})
@@ -82,7 +79,7 @@ func TestIntegration_InvalidToken(t *testing.T) {
 
 	url := os.Getenv("ZABBIX_URL")
 	if url == "" {
-		url = "http://127.0.0.1:8080/api_jsonrpc.php"
+		url = defaultTestURL
 	}
 
 	client := NewClient(url, "invalid-token")

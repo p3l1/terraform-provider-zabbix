@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -14,10 +13,8 @@ import (
 )
 
 func TestProvider_Configure_EnvironmentVariableFallback(t *testing.T) {
-	os.Setenv("ZABBIX_URL", "https://env.example.com/api_jsonrpc.php")
-	os.Setenv("ZABBIX_API_TOKEN", "env-token")
-	defer os.Unsetenv("ZABBIX_URL")
-	defer os.Unsetenv("ZABBIX_API_TOKEN")
+	t.Setenv("ZABBIX_URL", "https://env.example.com/api_jsonrpc.php")
+	t.Setenv("ZABBIX_API_TOKEN", "env-token")
 
 	p := New("test")()
 	schemaResp := &provider.SchemaResponse{}
@@ -52,8 +49,8 @@ func TestProvider_Configure_EnvironmentVariableFallback(t *testing.T) {
 }
 
 func TestProvider_Configure_MissingRequiredConfig(t *testing.T) {
-	os.Unsetenv("ZABBIX_URL")
-	os.Unsetenv("ZABBIX_API_TOKEN")
+	t.Setenv("ZABBIX_URL", "")
+	t.Setenv("ZABBIX_API_TOKEN", "")
 
 	p := New("test")()
 	schemaResp := &provider.SchemaResponse{}
@@ -85,10 +82,8 @@ func TestProvider_Configure_MissingRequiredConfig(t *testing.T) {
 }
 
 func TestProvider_Configure_ConfigOverridesEnvironment(t *testing.T) {
-	os.Setenv("ZABBIX_URL", "https://env.example.com/api_jsonrpc.php")
-	os.Setenv("ZABBIX_API_TOKEN", "env-token")
-	defer os.Unsetenv("ZABBIX_URL")
-	defer os.Unsetenv("ZABBIX_API_TOKEN")
+	t.Setenv("ZABBIX_URL", "https://env.example.com/api_jsonrpc.php")
+	t.Setenv("ZABBIX_API_TOKEN", "env-token")
 
 	p := New("test")()
 	schemaResp := &provider.SchemaResponse{}

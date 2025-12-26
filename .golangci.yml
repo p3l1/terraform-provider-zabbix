@@ -7,16 +7,17 @@ linters:
   default: none
   enable:
     - errcheck
-    - gofmt
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
 
-linters-settings:
-  gofmt:
-    simplify: true
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true
 
 issues:
   exclude-dirs:
@@ -24,4 +25,5 @@ issues:
 
 output:
   formats:
-    - format: colored-line-number
+    text:
+      path: stdout

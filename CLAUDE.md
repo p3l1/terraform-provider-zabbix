@@ -69,7 +69,7 @@ cd docker
 docker compose up -d
 ```
 
-This starts Zabbix server, web frontend, and PostgreSQL database for local testing with preconfigured static API token.
+This starts Zabbix server, web frontend, and PostgreSQL database for local testing with preconfigured static API token. The static token (`071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a`) is used as a default in integration tests.
 
 ## Code Conventions
 

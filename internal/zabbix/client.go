@@ -5,6 +5,7 @@ package zabbix
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -52,8 +53,13 @@ var noAuthMethods = map[string]bool{
 	"apiinfo.version": true,
 }
 
-// Request sends a JSON-RPC 2.0 request to the Zabbix API.
+// Request sends a JSON-RPC 2.0 request to the Zabbix API using a background context.
 func (c *Client) Request(method string, params interface{}) (json.RawMessage, error) {
+	return c.RequestWithContext(context.Background(), method, params)
+}
+
+// RequestWithContext sends a JSON-RPC 2.0 request to the Zabbix API with the given context.
+func (c *Client) RequestWithContext(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
 	if params == nil {
 		params = map[string]interface{}{}
 	}
@@ -74,7 +80,7 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPost, c.URL, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.URL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http request: %w", err)
 	}
@@ -85,7 +91,7 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusOK {
 		return nil, &HTTPError{
@@ -104,6 +110,10 @@ func (c *Client) Request(method string, params interface{}) (json.RawMessage, er
 			Method: method,
 			Err:    resp.Error,
 		}
+	}
+
+	if resp.ID != req.ID {
+		return nil, fmt.Errorf("response id mismatch: expected %d, got %d", req.ID, resp.ID)
 	}
 
 	return resp.Result, nil

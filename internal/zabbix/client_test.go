@@ -4,10 +4,12 @@
 package zabbix
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -65,7 +67,7 @@ func TestRequest_Success(t *testing.T) {
 			Result:  json.RawMessage(`[]`),
 			ID:      req.ID,
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -99,7 +101,7 @@ func TestRequest_NoAuthForAPIInfo(t *testing.T) {
 			Result:  json.RawMessage(`"7.0.0"`),
 			ID:      req.ID,
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -123,7 +125,9 @@ func TestRequest_WithParams(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req Request
-		json.Unmarshal(body, &req)
+		if err := json.Unmarshal(body, &req); err != nil {
+			t.Fatalf("failed to unmarshal request: %v", err)
+		}
 
 		params, ok := req.Params.(map[string]interface{})
 		if !ok {
@@ -138,7 +142,7 @@ func TestRequest_WithParams(t *testing.T) {
 			Result:  json.RawMessage(`[{"hostid": "10084"}]`),
 			ID:      req.ID,
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -172,7 +176,7 @@ func TestRequest_APIError(t *testing.T) {
 			},
 			ID: 1,
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -228,7 +232,7 @@ func TestRequest_ConnectionError(t *testing.T) {
 
 func TestRequest_InvalidJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("not json"))
+		_, _ = w.Write([]byte("not json"))
 	}))
 	defer server.Close()
 
@@ -245,7 +249,9 @@ func TestRequest_IncrementingID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req Request
-		json.Unmarshal(body, &req)
+		if err := json.Unmarshal(body, &req); err != nil {
+			t.Fatalf("failed to unmarshal request: %v", err)
+		}
 		receivedIDs = append(receivedIDs, req.ID)
 
 		resp := Response{
@@ -253,19 +259,61 @@ func TestRequest_IncrementingID(t *testing.T) {
 			Result:  json.RawMessage(`"ok"`),
 			ID:      req.ID,
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-token")
-	client.Request("test", nil)
-	client.Request("test", nil)
-	client.Request("test", nil)
+	_, _ = client.Request("test", nil)
+	_, _ = client.Request("test", nil)
+	_, _ = client.Request("test", nil)
 
 	if len(receivedIDs) != 3 {
 		t.Fatalf("expected 3 requests, got %d", len(receivedIDs))
 	}
 	if receivedIDs[0] != 1 || receivedIDs[1] != 2 || receivedIDs[2] != 3 {
 		t.Errorf("expected IDs [1, 2, 3], got %v", receivedIDs)
+	}
+}
+
+func TestRequestWithContext_Cancellation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := client.RequestWithContext(ctx, "test", nil)
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "context canceled") {
+		t.Errorf("expected context canceled error, got: %v", err)
+	}
+}
+
+func TestRequest_ResponseIDMismatch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := Response{
+			JSONRPC: "2.0",
+			Result:  json.RawMessage(`"ok"`),
+			ID:      999,
+		}
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	_, err := client.Request("test", nil)
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "response id mismatch") {
+		t.Errorf("expected response id mismatch error, got: %v", err)
 	}
 }
