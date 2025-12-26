@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/p3l1/zabbix-terraform/internal/zabbix"
 )
 
 var _ provider.Provider = &ZabbixProvider{}
@@ -96,13 +97,19 @@ func (p *ZabbixProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	// TODO: Create Zabbix client with url and apiToken
+	client := zabbix.NewClient(url, apiToken)
+	resp.DataSourceData = client
+	resp.ResourceData = client
 }
 
 func (p *ZabbixProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewHostGroupResource,
+	}
 }
 
 func (p *ZabbixProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewHostGroupDataSource,
+	}
 }
