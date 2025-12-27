@@ -37,7 +37,7 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.1.6
 
@@ -97,11 +97,13 @@ jobs:
           for i in {1..60}; do
             if docker exec zabbix-server zabbix_server -R config_cache_reload 2>/dev/null; then
               echo "Zabbix server is ready"
-              break
+              exit 0
             fi
             echo "Attempt $i/60 - waiting..."
             sleep 5
           done
+          echo "ERROR: Zabbix server failed to start within timeout"
+          exit 1
 
       - name: Start Zabbix Web
         run: |
@@ -123,11 +125,13 @@ jobs:
               -d '{"jsonrpc":"2.0","method":"apiinfo.version","params":{},"id":1}' \
               http://localhost:8080/api_jsonrpc.php | grep -q result; then
               echo "Zabbix web is ready"
-              break
+              exit 0
             fi
             echo "Attempt $i/60 - waiting..."
             sleep 5
           done
+          echo "ERROR: Zabbix web failed to start within timeout"
+          exit 1
 
       - name: Initialize API Token
         run: |
@@ -139,3 +143,11 @@ jobs:
           ZABBIX_URL: "http://localhost:8080/api_jsonrpc.php"
           ZABBIX_API_TOKEN: "071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a"
         run: go test -v -cover -timeout 30m ./...
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          echo "=== Zabbix Server Logs ==="
+          docker logs zabbix-server 2>&1 || true
+          echo "=== Zabbix Web Logs ==="
+          docker logs zabbix-web 2>&1 || true
