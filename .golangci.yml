@@ -19,10 +19,6 @@ formatters:
     gofmt:
       simplify: true
 
-issues:
-  exclude-dirs:
-    - vendor
-
 output:
   formats:
     text:
