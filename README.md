@@ -9,7 +9,7 @@ A Terraform/OpenTofu provider for managing [Zabbix](https://www.zabbix.com/) mon
 ## Requirements
 
 - [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.10.7
-- [Go](https://golang.org/doc/install) >= 1.25 (for building)
+- [Go](https://golang.org/doc/install) >= 1.24 (for building)
 - [Zabbix](https://www.zabbix.com/) Server >= 7.0
 
 ## Supported Resources
