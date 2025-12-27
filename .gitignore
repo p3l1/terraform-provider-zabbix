@@ -20,6 +20,7 @@ vendor/
 # Build output
 bin/
 dist/
+terraform-provider-zabbix
 
 # Terraform
 *.tfstate
