@@ -105,11 +105,13 @@ func (p *ZabbixProvider) Configure(ctx context.Context, req provider.ConfigureRe
 func (p *ZabbixProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewHostGroupResource,
+		NewHostResource,
 	}
 }
 
 func (p *ZabbixProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewHostGroupDataSource,
+		NewHostDataSource,
 	}
 }
