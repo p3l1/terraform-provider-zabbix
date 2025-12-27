@@ -9,7 +9,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/p3l1/zabbix-terraform/internal/provider"
+	"github.com/p3l1/terraform-provider-zabbix/internal/provider"
 )
 
 var version = "dev"

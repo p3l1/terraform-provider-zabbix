@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/p3l1/zabbix-terraform/internal/zabbix"
+	"github.com/p3l1/terraform-provider-zabbix/internal/zabbix"
 )
 
 var _ provider.Provider = &ZabbixProvider{}

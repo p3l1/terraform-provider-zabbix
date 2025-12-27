@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/p3l1/zabbix-terraform/internal/zabbix"
+	"github.com/p3l1/terraform-provider-zabbix/internal/zabbix"
 )
 
 var _ datasource.DataSource = &HostDataSource{}
