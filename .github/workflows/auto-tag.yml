@@ -5,7 +5,7 @@ name: Auto Tag
 
 on:
   push:
-    branches: [main, 7-setup-ci-cd-github-actions]  # TODO: Remove feature branch after testing
+    branches: [main]
 
 permissions:
   contents: write
