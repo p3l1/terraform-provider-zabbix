@@ -1,0 +1,111 @@
+# ABOUTME: Validates that VERSION file is bumped correctly based on conventional commits.
+# ABOUTME: Blocks PRs if version bump doesn't match commit semantics (feat=minor, fix=patch, BREAKING=major).
+
+name: Version Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-version:
+    name: Validate Version Bump
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from PR branch
+        id: pr_version
+        run: echo "version=$(cat VERSION | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+
+      - name: Get version from base branch
+        id: base_version
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          BASE_VERSION=$(git show origin/${{ github.base_ref }}:VERSION 2>/dev/null | tr -d '[:space:]' || echo "0.0.0")
+          echo "version=$BASE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get commit messages
+        id: commits
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --pretty=format:"%s" | tr '\n' '|')
+          echo "messages=$COMMITS" >> $GITHUB_OUTPUT
+
+      - name: Validate version bump
+        run: |
+          PR_VERSION="${{ steps.pr_version.outputs.version }}"
+          BASE_VERSION="${{ steps.base_version.outputs.version }}"
+          COMMITS="${{ steps.commits.outputs.messages }}"
+
+          echo "Base version: $BASE_VERSION"
+          echo "PR version: $PR_VERSION"
+          echo "Commits: $COMMITS"
+
+          # Parse versions
+          IFS='.' read -r BASE_MAJOR BASE_MINOR BASE_PATCH <<< "$BASE_VERSION"
+          IFS='.' read -r PR_MAJOR PR_MINOR PR_PATCH <<< "$PR_VERSION"
+
+          # Determine required bump from commits
+          REQUIRED_BUMP="none"
+
+          # Check for BREAKING CHANGE (major bump)
+          if echo "$COMMITS" | grep -qiE 'BREAKING[ -]CHANGE|^[a-z]+(\(.+\))?!:'; then
+            REQUIRED_BUMP="major"
+          # Check for feat (minor bump)
+          elif echo "$COMMITS" | grep -qE '^feat(\(.+\))?:'; then
+            REQUIRED_BUMP="minor"
+          # Check for fix (patch bump)
+          elif echo "$COMMITS" | grep -qE '^fix(\(.+\))?:'; then
+            REQUIRED_BUMP="patch"
+          fi
+
+          echo "Required bump: $REQUIRED_BUMP"
+
+          # Calculate expected version
+          case $REQUIRED_BUMP in
+            major)
+              EXPECTED_MAJOR=$((BASE_MAJOR + 1))
+              EXPECTED_MINOR=0
+              EXPECTED_PATCH=0
+              ;;
+            minor)
+              EXPECTED_MAJOR=$BASE_MAJOR
+              EXPECTED_MINOR=$((BASE_MINOR + 1))
+              EXPECTED_PATCH=0
+              ;;
+            patch)
+              EXPECTED_MAJOR=$BASE_MAJOR
+              EXPECTED_MINOR=$BASE_MINOR
+              EXPECTED_PATCH=$((BASE_PATCH + 1))
+              ;;
+            none)
+              echo "No version bump required (no feat/fix/BREAKING commits)"
+              if [ "$PR_VERSION" != "$BASE_VERSION" ]; then
+                echo "WARNING: Version was bumped but no conventional commits require it"
+              fi
+              exit 0
+              ;;
+          esac
+
+          EXPECTED_VERSION="${EXPECTED_MAJOR}.${EXPECTED_MINOR}.${EXPECTED_PATCH}"
+          echo "Expected version: $EXPECTED_VERSION"
+
+          if [ "$PR_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo ""
+            echo "ERROR: Version mismatch!"
+            echo "  Required bump: $REQUIRED_BUMP"
+            echo "  Expected: $EXPECTED_VERSION"
+            echo "  Got: $PR_VERSION"
+            echo ""
+            echo "Please update the VERSION file to: $EXPECTED_VERSION"
+            exit 1
+          fi
+
+          echo "Version bump is correct!"
