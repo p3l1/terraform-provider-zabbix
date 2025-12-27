@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -208,10 +209,13 @@ func (d *HostDataSource) apiToModel(ctx context.Context, host *zabbix.Host, data
 		diags.Append(diagsTemplates...)
 		data.Templates = templatesList
 	} else {
-		data.Templates = types.ListValueMust(types.StringType, []attr.Value{})
+		data.Templates = types.ListNull(types.StringType)
 	}
 
-	// Convert interfaces
+	// Convert interfaces - sort by interface_id for stable ordering
+	sort.Slice(host.Interfaces, func(i, j int) bool {
+		return host.Interfaces[i].InterfaceID < host.Interfaces[j].InterfaceID
+	})
 	interfaceType := types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"interface_id": types.StringType,
@@ -262,7 +266,7 @@ func (d *HostDataSource) apiToModel(ctx context.Context, host *zabbix.Host, data
 		diags.Append(diagsTags...)
 		data.Tags = tagsList
 	} else {
-		data.Tags = types.ListValueMust(tagType, []attr.Value{})
+		data.Tags = types.ListNull(tagType)
 	}
 
 	return diags

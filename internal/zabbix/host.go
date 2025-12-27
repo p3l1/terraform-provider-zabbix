@@ -358,7 +358,7 @@ func (c *Client) UpdateHost(ctx context.Context, host *Host) error {
 		params["interfaces"] = interfaces
 	}
 
-	if len(host.Templates) > 0 {
+	if host.Templates != nil {
 		templates := make([]map[string]string, len(host.Templates))
 		for i, t := range host.Templates {
 			templates[i] = map[string]string{"templateid": t.TemplateID}

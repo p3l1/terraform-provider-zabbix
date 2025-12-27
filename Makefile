@@ -1,13 +1,15 @@
 # ABOUTME: Build targets for the Zabbix Terraform provider.
 # ABOUTME: Provides build, test, lint, and documentation generation commands.
 
+BINARY_NAME=terraform-provider-zabbix
+
 default: build
 
 build:
-	go build -v ./...
+	go build -v -o $(BINARY_NAME) .
 
 install: build
-	go install -v ./...
+	cp $(BINARY_NAME) $(shell go env GOPATH)/bin/
 
 lint:
 	golangci-lint run

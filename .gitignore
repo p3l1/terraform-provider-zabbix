@@ -49,3 +49,6 @@ coverage.html
 
 # Claude Code
 .claude/
+
+# Manual testing
+test/

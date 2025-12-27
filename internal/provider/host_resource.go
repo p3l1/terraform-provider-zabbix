@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -229,6 +230,14 @@ func (r *HostResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	if apiHost == nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Host",
+			fmt.Sprintf("Host %s was created but could not be found", hostID),
+		)
+		return
+	}
+
 	diags = r.apiToModel(ctx, apiHost, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -305,6 +314,14 @@ func (r *HostResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError(
 			"Error Reading Host",
 			fmt.Sprintf("Could not read host after update: %s", err),
+		)
+		return
+	}
+
+	if apiHost == nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Host",
+			fmt.Sprintf("Host %s was updated but could not be found", state.ID.ValueString()),
 		)
 		return
 	}
@@ -442,7 +459,10 @@ func (r *HostResource) apiToModel(ctx context.Context, host *zabbix.Host, data *
 		data.Templates = types.ListNull(types.StringType)
 	}
 
-	// Convert interfaces
+	// Convert interfaces - sort by interface_id for stable ordering
+	sort.Slice(host.Interfaces, func(i, j int) bool {
+		return host.Interfaces[i].InterfaceID < host.Interfaces[j].InterfaceID
+	})
 	interfaceType := types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"interface_id": types.StringType,
