@@ -1,0 +1,141 @@
+# ABOUTME: CI workflow for running tests on every push and pull request.
+# ABOUTME: Runs unit tests, acceptance tests against Zabbix, and linting.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - run: go mod download
+      - run: go build -v .
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - run: go mod download
+      - run: go test -v -cover -timeout=120s -parallel=4 ./...
+
+  testacc:
+    name: Acceptance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: zabbix
+          POSTGRES_PASSWORD: zabbix
+          POSTGRES_DB: zabbix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zabbix"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - run: go mod download
+
+      - name: Start Zabbix Server
+        run: |
+          docker run -d --name zabbix-server \
+            --network host \
+            -e DB_SERVER_HOST=127.0.0.1 \
+            -e POSTGRES_USER=zabbix \
+            -e POSTGRES_PASSWORD=zabbix \
+            -e POSTGRES_DB=zabbix \
+            zabbix/zabbix-server-pgsql:alpine-7.0-latest
+
+      - name: Wait for Zabbix Server
+        run: |
+          echo "Waiting for Zabbix server to be ready..."
+          for i in {1..60}; do
+            if docker exec zabbix-server zabbix_server -R config_cache_reload 2>/dev/null; then
+              echo "Zabbix server is ready"
+              break
+            fi
+            echo "Attempt $i/60 - waiting..."
+            sleep 5
+          done
+
+      - name: Start Zabbix Web
+        run: |
+          docker run -d --name zabbix-web \
+            --network host \
+            -e ZBX_SERVER_HOST=127.0.0.1 \
+            -e DB_SERVER_HOST=127.0.0.1 \
+            -e POSTGRES_USER=zabbix \
+            -e POSTGRES_PASSWORD=zabbix \
+            -e POSTGRES_DB=zabbix \
+            -e PHP_TZ=UTC \
+            zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+
+      - name: Wait for Zabbix Web
+        run: |
+          echo "Waiting for Zabbix web to be ready..."
+          for i in {1..60}; do
+            if curl -sf -X POST -H 'Content-Type: application/json' \
+              -d '{"jsonrpc":"2.0","method":"apiinfo.version","params":{},"id":1}' \
+              http://localhost:8080/api_jsonrpc.php | grep -q result; then
+              echo "Zabbix web is ready"
+              break
+            fi
+            echo "Attempt $i/60 - waiting..."
+            sleep 5
+          done
+
+      - name: Initialize API Token
+        run: |
+          PGPASSWORD=zabbix psql -h 127.0.0.1 -U zabbix -d zabbix -f docker/init-db.sql
+
+      - name: Run Acceptance Tests
+        env:
+          TF_ACC: "1"
+          ZABBIX_URL: "http://localhost:8080/api_jsonrpc.php"
+          ZABBIX_API_TOKEN: "071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a"
+        run: go test -v -cover -timeout 30m ./...
