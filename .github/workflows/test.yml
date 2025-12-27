@@ -60,7 +60,7 @@ jobs:
 
   testacc:
     name: Acceptance Tests
-    needs: [build, test]
+    needs: [build, lint, test]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
