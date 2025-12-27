@@ -1,6 +1,6 @@
 module github.com/p3l1/terraform-provider-zabbix
 
-go 1.25.2
+go 1.24.0
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
