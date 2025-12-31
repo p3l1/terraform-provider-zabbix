@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -75,25 +74,16 @@ func (r *TemplateResource) Schema(ctx context.Context, req resource.SchemaReques
 				Description: "Technical name of the template. Required when not using source_content.",
 				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"name": schema.StringAttribute{
 				Description: "Visible name of the template. Defaults to host if not set.",
 				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"description": schema.StringAttribute{
 				Description: "Description of the template.",
 				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"uuid": schema.StringAttribute{
 				Description: "Universally unique identifier of the template.",
@@ -109,9 +99,6 @@ func (r *TemplateResource) Schema(ctx context.Context, req resource.SchemaReques
 				ElementType: types.StringType,
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
-				},
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"tags": schema.ListNestedAttribute{
@@ -130,9 +117,6 @@ func (r *TemplateResource) Schema(ctx context.Context, req resource.SchemaReques
 							Computed:    true,
 						},
 					},
-				},
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"source_format": schema.StringAttribute{
