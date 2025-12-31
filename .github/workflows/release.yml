@@ -28,6 +28,7 @@ jobs:
     name: Release
     needs: [test]
     runs-on: ubuntu-latest
+    environment: opentofu
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,6 +39,13 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -45,3 +53,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
