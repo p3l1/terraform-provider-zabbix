@@ -50,9 +50,10 @@ signs:
       - "--output"
       - "${signature}"
       - "--detach-sign"
-      - "--pinentry-mode"
-      - "loopback"
+      - "--passphrase-fd"
+      - "0"
       - "${artifact}"
+    stdin: "{{ .Env.GPG_PASSPHRASE }}"
 
 release:
   extra_files:
