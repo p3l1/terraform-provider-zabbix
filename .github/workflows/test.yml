@@ -3,12 +3,13 @@
 
 name: Tests
 
+# This GitHub action runs your tests for each pull request and push.
+# Optionally, you can turn it on using a schedule for regular testing.
 on:
-  push:
-    branches: [main]
+  pull_request:
     paths-ignore:
       - 'README.md'
-  pull_request:
+  push:
     paths-ignore:
       - 'README.md'
 
@@ -16,31 +17,40 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Testing only needs permissions to read the repository contents.
 permissions:
   contents: read
 
 jobs:
-  test:
-    name: Terraform Provider Acceptance Tests
+  # Ensure project builds before testing
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: 'go.mod'
           cache: true
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Build
-        run: go build -v .
-
-      - name: Lint
-        uses: golangci/golangci-lint-action@v6
+      - run: go mod download
+      - run: go build -v .
+      - name: Run linters
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
           version: latest
+
+  test:
+    name: Terraform Provider Acceptance Tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
 
       - name: Start Zabbix environment
         working-directory: docker
