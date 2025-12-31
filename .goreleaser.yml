@@ -50,6 +50,8 @@ signs:
       - "--output"
       - "${signature}"
       - "--detach-sign"
+      - "--pinentry-mode"
+      - "loopback"
       - "${artifact}"
 
 release:
