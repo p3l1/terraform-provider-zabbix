@@ -106,6 +106,8 @@ func (p *ZabbixProvider) Resources(ctx context.Context) []func() resource.Resour
 	return []func() resource.Resource{
 		NewHostGroupResource,
 		NewHostResource,
+		NewTemplateGroupResource,
+		NewTemplateResource,
 	}
 }
 
@@ -113,5 +115,7 @@ func (p *ZabbixProvider) DataSources(ctx context.Context) []func() datasource.Da
 	return []func() datasource.DataSource{
 		NewHostGroupDataSource,
 		NewHostDataSource,
+		NewTemplateGroupDataSource,
+		NewTemplateDataSource,
 	}
 }
