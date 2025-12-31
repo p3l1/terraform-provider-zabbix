@@ -1,148 +1,64 @@
 # ABOUTME: CI workflow for running tests on every push and pull request.
-# ABOUTME: Runs unit tests, acceptance tests against Zabbix, and linting.
+# ABOUTME: Runs build, lint, and acceptance tests against Zabbix using Docker Compose.
 
 name: Tests
 
+# This GitHub action runs your tests for each pull request and push.
+# Optionally, you can turn it on using a schedule for regular testing.
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    paths-ignore:
+      - 'README.md'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Testing only needs permissions to read the repository contents.
 permissions:
   contents: read
 
 jobs:
+  # Ensure project builds before testing
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: 'go.mod'
           cache: true
       - run: go mod download
       - run: go build -v .
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Run linters
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
-          go-version-file: 'go.mod'
-          cache: true
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.1.6
+          version: latest
 
   test:
-    name: Unit Tests
+    name: Terraform Provider Acceptance Tests
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: 'go.mod'
           cache: true
-      - run: go mod download
-      - run: go test -v -cover -timeout=120s -parallel=4 ./...
 
-  testacc:
-    name: Acceptance Tests
-    needs: [build, lint, test]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: zabbix
-          POSTGRES_PASSWORD: zabbix
-          POSTGRES_DB: zabbix
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U zabbix"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
+      - name: Start Zabbix environment
+        working-directory: docker
+        run: docker compose up -d --wait --wait-timeout 300
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-      - run: go mod download
-
-      - name: Start Zabbix Server
-        run: |
-          docker run -d --name zabbix-server \
-            --network host \
-            -e DB_SERVER_HOST=127.0.0.1 \
-            -e POSTGRES_USER=zabbix \
-            -e POSTGRES_PASSWORD=zabbix \
-            -e POSTGRES_DB=zabbix \
-            zabbix/zabbix-server-pgsql:alpine-7.0-latest
-
-      - name: Wait for Zabbix Server
-        run: |
-          echo "Waiting for Zabbix server to be ready..."
-          for i in {1..60}; do
-            if docker exec zabbix-server zabbix_server -R config_cache_reload 2>/dev/null; then
-              echo "Zabbix server is ready"
-              exit 0
-            fi
-            echo "Attempt $i/60 - waiting..."
-            sleep 5
-          done
-          echo "ERROR: Zabbix server failed to start within timeout"
-          exit 1
-
-      - name: Start Zabbix Web
-        run: |
-          docker run -d --name zabbix-web \
-            --network host \
-            -e ZBX_SERVER_HOST=127.0.0.1 \
-            -e DB_SERVER_HOST=127.0.0.1 \
-            -e POSTGRES_USER=zabbix \
-            -e POSTGRES_PASSWORD=zabbix \
-            -e POSTGRES_DB=zabbix \
-            -e PHP_TZ=UTC \
-            zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
-
-      - name: Wait for Zabbix Web
-        run: |
-          echo "Waiting for Zabbix web to be ready..."
-          for i in {1..60}; do
-            if curl -sf -X POST -H 'Content-Type: application/json' \
-              -d '{"jsonrpc":"2.0","method":"apiinfo.version","params":{},"id":1}' \
-              http://localhost:8080/api_jsonrpc.php | grep -q result; then
-              echo "Zabbix web is ready"
-              exit 0
-            fi
-            echo "Attempt $i/60 - waiting..."
-            sleep 5
-          done
-          echo "ERROR: Zabbix web failed to start within timeout"
-          exit 1
-
-      - name: Initialize API Token
-        run: |
-          PGPASSWORD=zabbix psql -h 127.0.0.1 -U zabbix -d zabbix -f docker/init-db.sql
-
-      - name: Run Acceptance Tests
+      - name: Run tests
         env:
           TF_ACC: "1"
           ZABBIX_URL: "http://localhost:8080/api_jsonrpc.php"
@@ -151,8 +67,5 @@ jobs:
 
       - name: Show container logs on failure
         if: failure()
-        run: |
-          echo "=== Zabbix Server Logs ==="
-          docker logs zabbix-server 2>&1 || true
-          echo "=== Zabbix Web Logs ==="
-          docker logs zabbix-web 2>&1 || true
+        working-directory: docker
+        run: docker compose logs
