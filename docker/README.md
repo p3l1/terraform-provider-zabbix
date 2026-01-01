@@ -1,9 +1,6 @@
-# ABOUTME: Documentation for the local Zabbix test environment.
-# ABOUTME: Explains how to start the stack and access the API.
-
 # Zabbix Test Environment
 
-Local Zabbix 7.0 stack for running acceptance tests.
+Local Zabbix stack for running acceptance tests.
 
 ## Quick Start
 
@@ -33,7 +30,11 @@ docker compose down -v
 
 - **URL**: `http://localhost:8080/api_jsonrpc.php`
 - **Default credentials**: Admin / zabbix
-- **Pre-configured API token**: `071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a`
+- **Pre-configured API token**:
+
+```
+071fb9d2e8f72cf9c40128f0f5aab3def1bab0893413314b083fdcb4551eb01a
+```
 
 The API token is automatically created by the `db-init` service when starting fresh.
 
