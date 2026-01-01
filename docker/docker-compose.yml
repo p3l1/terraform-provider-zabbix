@@ -34,7 +34,7 @@ services:
       start_period: 30s
 
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-pgsql@sha256:f8997ca999d1597b8ea6c44b283b3a027d3b25e5b41c3b29ceb60ac61d430f92 # alpine-7.0.22
+    image: zabbix/zabbix-web-nginx-pgsql@sha256:5291ad0a67cd25e80d79f81956b4297ee2aad3a449fb49b96cfd6dec2ebd0d64 # alpine-7.0.22
     ports:
       - "8080:8080"
     environment:
