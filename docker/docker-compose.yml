@@ -17,7 +17,7 @@ services:
       retries: 5
 
   zabbix-server:
-    image: zabbix/zabbix-server-pgsql@sha256:2c74ad8354a0cfb9be5205ed106a3a4183eb7cdc9c1c97ddd7b0eb4b8682b6b6 # alpine-7.0.22
+    image: zabbix/zabbix-server-pgsql@sha256:a6f748d96bfa4d361df5e9284eba041c475e7ff26c1358f8f189969437ebdb9b # alpine-7.0.22
     environment:
       DB_SERVER_HOST: postgres
       POSTGRES_USER: zabbix
