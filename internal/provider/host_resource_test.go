@@ -274,3 +274,131 @@ resource "zabbix_host" "test" {
 }
 `, name)
 }
+
+func TestAccHostResource_withTemplates(t *testing.T) {
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccHostResourceConfigWithTemplates(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("zabbix_host.test", "host", rName),
+					resource.TestCheckResourceAttr("zabbix_host.test", "templates.#", "1"),
+				),
+			},
+			{
+				ResourceName:      "zabbix_host.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccHostResource_templateUpdate(t *testing.T) {
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccHostResourceConfigWithTemplates(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("zabbix_host.test", "templates.#", "1"),
+				),
+			},
+			{
+				Config: testAccHostResourceConfigWithMultipleTemplates(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("zabbix_host.test", "templates.#", "2"),
+				),
+			},
+			{
+				Config: testAccHostResourceConfigWithTemplates(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("zabbix_host.test", "templates.#", "1"),
+				),
+			},
+		},
+	})
+}
+
+func testAccHostResourceConfigWithTemplates(name string) string {
+	return fmt.Sprintf(`
+resource "zabbix_host_group" "test" {
+  name = %[1]q
+}
+
+resource "zabbix_template_group" "test" {
+  name = "%[1]s-tpl-group"
+}
+
+resource "zabbix_template" "test" {
+  host   = "%[1]s-template"
+  name   = "%[1]s-template-display"
+  groups = [zabbix_template_group.test.id]
+}
+
+resource "zabbix_host" "test" {
+  host      = %[1]q
+  name      = "%[1]s-display"
+  groups    = [zabbix_host_group.test.id]
+  templates = [zabbix_template.test.id]
+  status    = 0
+
+  interfaces = [{
+    type   = "agent"
+    ip     = "192.168.1.100"
+    dns    = ""
+    port   = "10050"
+    main   = true
+    use_ip = true
+  }]
+}
+`, name)
+}
+
+func testAccHostResourceConfigWithMultipleTemplates(name string) string {
+	return fmt.Sprintf(`
+resource "zabbix_host_group" "test" {
+  name = %[1]q
+}
+
+resource "zabbix_template_group" "test" {
+  name = "%[1]s-tpl-group"
+}
+
+resource "zabbix_template" "test" {
+  host   = "%[1]s-template"
+  name   = "%[1]s-template-display"
+  groups = [zabbix_template_group.test.id]
+}
+
+resource "zabbix_template" "test2" {
+  host   = "%[1]s-template2"
+  name   = "%[1]s-template2-display"
+  groups = [zabbix_template_group.test.id]
+}
+
+resource "zabbix_host" "test" {
+  host      = %[1]q
+  name      = "%[1]s-display"
+  groups    = [zabbix_host_group.test.id]
+  templates = [zabbix_template.test.id, zabbix_template.test2.id]
+  status    = 0
+
+  interfaces = [{
+    type   = "agent"
+    ip     = "192.168.1.100"
+    dns    = ""
+    port   = "10050"
+    main   = true
+    use_ip = true
+  }]
+}
+`, name)
+}
